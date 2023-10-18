@@ -1,0 +1,31 @@
+From 6529c122df9db6076046ff9caeae34d661ed73cf Mon Sep 17 00:00:00 2001
+From: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Date: Thu, 7 Jul 2022 14:50:14 +0530
+Subject: [PATCH 3/6] os_dep/ioctl_cfg80211: add arg to
+ cfg80211_ch_switch_started_notify func
+
+cfg80211_ch_switch_started_notify function call arguments are added in latest version
+https://github.com/gordboy/rtl8812au-5.9.3.2/issues/10
+
+Signed-off-by: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Change-Id: I150c4c30edc725af896c2052e7fb125b73885dd7
+---
+ os_dep/linux/ioctl_cfg80211.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
+index 900ea56..71bb128 100755
+--- a/os_dep/linux/ioctl_cfg80211.c
++++ b/os_dep/linux/ioctl_cfg80211.c
+@@ -441,7 +441,7 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8
+ 
+ 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
+ 	if (started) {
+-		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0);
++		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, false);
+ 		goto exit;
+ 	}
+ 	#endif
+-- 
+2.25.1
+

@@ -1,0 +1,62 @@
+From 5e3ef7159486bbc7e86364169cf467884e410579 Mon Sep 17 00:00:00 2001
+From: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Date: Thu, 7 Jul 2022 14:48:48 +0530
+Subject: [PATCH 2/6] core/rtw_btcoex: drop support of ipx and apple talk
+
+IPX is not supported by the Linux kernel since v5.15-rc1
+https://github.com/aircrack-ng/rtl8188eus/pull/146
+https://github.com/EmuELEC/EmuELEC/blob/
+7d51b8e7105c9bad63c8866554071e16b72b08c0/packages/linux-drivers/RTL8192DU/patches/5-15-0.patch
+
+Signed-off-by: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Change-Id: Ie22637840a919a89f2cd1954355507bad28be098
+---
+ core/rtw_btcoex.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/core/rtw_btcoex.c b/core/rtw_btcoex.c
+index 02b0e54..0b6931c 100644
+--- a/core/rtw_btcoex.c
++++ b/core/rtw_btcoex.c
+@@ -1468,7 +1468,9 @@ u8 rtw_btcoex_sendmsgbysocket(_adapter *padapter, u8 *msg, u8 msg_size, bool for
+ {
+ 	u8 error;
+ 	struct msghdr	udpmsg;
+-	mm_segment_t	oldfs;
++	#ifndef RTW_NO_SET_FS
++		mm_segment_t	oldfs;
++	#endif
+ 	struct iovec	iov;
+ 	struct bt_coex_info *pcoex_info = &padapter->coex_info;
+ 
+@@ -1498,15 +1500,19 @@ u8 rtw_btcoex_sendmsgbysocket(_adapter *padapter, u8 *msg, u8 msg_size, bool for
+ 	udpmsg.msg_control	= NULL;
+ 	udpmsg.msg_controllen = 0;
+ 	udpmsg.msg_flags	= MSG_DONTWAIT | MSG_NOSIGNAL;
+-	oldfs = get_fs();
+-	set_fs(KERNEL_DS);
++	#ifndef RTW_NO_SET_FS
++		old_fs = get_fs();
++		set_fs(KERNEL_DS);
++	#endif
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 1, 0))
+ 	error = sock_sendmsg(pcoex_info->udpsock, &udpmsg);
+ #else
+ 	error = sock_sendmsg(pcoex_info->udpsock, &udpmsg, msg_size);
+ #endif
+-	set_fs(oldfs);
++	#ifndef RTW_NO_SET_FS
++		set_fs(oldfs);
++	#endif
+ 	if (error < 0) {
+ 		RTW_INFO("Error when sendimg msg, error:%d\n", error);
+ 		return _FAIL;
+@@ -1784,4 +1790,3 @@ void rtw_btcoex_set_ant_info(PADAPTER padapter)
+ #endif
+ 		rtw_btcoex_wifionly_AntInfoSetting(padapter);
+ }
+-
+-- 
+2.25.1
+

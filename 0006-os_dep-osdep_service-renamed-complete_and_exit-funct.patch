@@ -1,0 +1,140 @@
+From 389bd6befcdcc8ea86d397364eded3a057d7f521 Mon Sep 17 00:00:00 2001
+From: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Date: Thu, 7 Jul 2022 14:58:16 +0530
+Subject: [PATCH 6/6] os_dep/osdep_service: renamed complete_and_exit function
+ call and added check for set_fs and get_fs
+
+renamed the complete_and_exit to kthread_complete_and_exit in latest versions
+https://lore.kernel.org/lkml/20211208202532.16409-8-ebiederm@xmission.com/
+
+remove uneeded & broken set_fs()/get_fs() from above kernel 5.10
+https://github.com/abperiasamy/rtl8812AU_8821AU_linux/pull/345
+
+Signed-off-by: Manoj Sai <abbaraju.manojsai@amarulasolutions.com>
+Change-Id: I3719db3b70562aa5762ead963350c7f69b10fcc6
+---
+ os_dep/osdep_service.c | 30 ++++++++++++++++++++++++++++--
+ 1 file changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/os_dep/osdep_service.c b/os_dep/osdep_service.c
+index 84093c8..f922e0a 100644
+--- a/os_dep/osdep_service.c
++++ b/os_dep/osdep_service.c
+@@ -1294,7 +1294,12 @@ u32 _rtw_down_sema(_sema *sema)
+ inline void thread_exit(_completion *comp)
+ {
+ #ifdef PLATFORM_LINUX
+-	complete_and_exit(comp, 0);
++	#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
++		complete_and_exit(comp, 0);
++	#else
++		kthread_complete_and_exit(comp,0);
++	#endif
++
+ #endif
+ 
+ #ifdef PLATFORM_FREEBSD
+@@ -2193,19 +2198,23 @@ static int isFileReadable(const char *path, u32 *sz)
+ {
+ 	struct file *fp;
+ 	int ret = 0;
++	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 	mm_segment_t oldfs;
++	#endif
+ 	char buf;
+ 
+ 	fp = filp_open(path, O_RDONLY, 0);
+ 	if (IS_ERR(fp))
+ 		ret = PTR_ERR(fp);
+ 	else {
++		#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 		oldfs = get_fs();
+ 		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0))
+ 		set_fs(KERNEL_DS);
+ 		#else
+ 		set_fs(get_ds());
+ 		#endif
++		#endif
+ 
+ 		if (1 != readFile(fp, &buf, 1))
+ 			ret = PTR_ERR(fp);
+@@ -2218,7 +2227,9 @@ static int isFileReadable(const char *path, u32 *sz)
+ 			#endif
+ 		}
+ 
++		#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 		set_fs(oldfs);
++		#endif
+ 		filp_close(fp, NULL);
+ 	}
+ 	return ret;
+@@ -2234,7 +2245,9 @@ static int isFileReadable(const char *path, u32 *sz)
+ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
+ {
+ 	int ret = -1;
++	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 	mm_segment_t oldfs;
++	#endif
+ 	struct file *fp;
+ 
+ 	if (path && buf) {
+@@ -2242,14 +2255,20 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
+ 		if (0 == ret) {
+ 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
+ 
++			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 			oldfs = get_fs();
+ 			#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0))
+ 			set_fs(KERNEL_DS);
+ 			#else
+ 			set_fs(get_ds());
+ 			#endif
++			#endif
++
+ 			ret = readFile(fp, buf, sz);
++
++			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 			set_fs(oldfs);
++			#endif
+ 			closeFile(fp);
+ 
+ 			RTW_INFO("%s readFile, ret:%d\n", __FUNCTION__, ret);
+@@ -2273,7 +2292,9 @@ static int retriveFromFile(const char *path, u8 *buf, u32 sz)
+ static int storeToFile(const char *path, u8 *buf, u32 sz)
+ {
+ 	int ret = 0;
++	#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 	mm_segment_t oldfs;
++	#endif
+ 	struct file *fp;
+ 
+ 	if (path && buf) {
+@@ -2281,14 +2302,20 @@ static int storeToFile(const char *path, u8 *buf, u32 sz)
+ 		if (0 == ret) {
+ 			RTW_INFO("%s openFile path:%s fp=%p\n", __FUNCTION__, path , fp);
+ 
++			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 			oldfs = get_fs();
+ 			#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0))
+ 			set_fs(KERNEL_DS);
+ 			#else
+ 			set_fs(get_ds());
+ 			#endif
++			#endif
++
+ 			ret = writeFile(fp, buf, sz);
++
++			#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0))
+ 			set_fs(oldfs);
++			#endif
+ 			closeFile(fp);
+ 
+ 			RTW_INFO("%s writeFile, ret:%d\n", __FUNCTION__, ret);
+@@ -3161,4 +3188,3 @@ int hexstr2bin(const char *hex, u8 *buf, size_t len)
+ 	}
+ 	return 0;
+ }
+-
+-- 
+2.25.1
+
